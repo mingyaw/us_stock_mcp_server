@@ -52,7 +52,7 @@ def save_dataframe_to_csv(df: pd.DataFrame, file_path: Path) -> None:
         raise
 
 def read_local_stock_data(stock_code):
-    """讀取本地股票CSV數據"""
+    """Read CSV file for stock data"""
     try:
         file_path = BASE_DATA_DIR / f"{stock_code}.csv"
         if not file_path.exists():
@@ -167,9 +167,9 @@ def get_local_stock_data(args: Dict) -> dict:
         symbol: Stock symbol, e.g., 'AAPL', 'MSFT'
     """
     try:
-        # 使用 UpdateStockDataArgs 進行驗證
+        # use UpdateStockDataArgs
         validated_args = GetLocalStockDataArgs(**args) 
-        # 從驗證後的物件取得參數
+        
         symbol = validated_args.symbol
         
         data = read_local_stock_data(symbol)
@@ -207,11 +207,7 @@ def update_stock_data_tool(args: Dict) -> dict:
         symbol = validated_args.symbol
         start_date = validated_args.start_date
 
-        # 先檢查本地數據
-        local_data = read_local_stock_data(symbol)
-        if local_data is not None:
-            result = update_stock_data(symbol, start_date)
-
+        result = update_stock_data(symbol, start_date)
         if result['status'] == 'error':
             return result
             
