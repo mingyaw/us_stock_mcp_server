@@ -51,18 +51,17 @@ def save_dataframe_to_csv(df: pd.DataFrame, file_path: Path) -> None:
         print(f"Error saving CSV file: {str(e)}", file=sys.stderr)
         raise
 
-def read_local_stock_data(symbol: str) -> Optional[List[Dict]]:
-    """Read local stock CSV data"""
+def read_local_stock_data(stock_code):
+    """讀取本地股票CSV數據"""
     try:
-        file_path = BASE_DATA_DIR / f"{symbol}.csv"
+        file_path = BASE_DATA_DIR / f"{stock_code}.csv"
         if not file_path.exists():
-            print(f"Stock data file not found: {file_path}", file=sys.stderr)
             return None
         
         df = pd.read_csv(file_path)
         df['Date'] = pd.to_datetime(df['Date'])
         df = df.sort_values(by='Date', ascending=False)
-        return df.to_dict('records')
+        return df
     except Exception as e:
         print(f"Error reading CSV file: {str(e)}", file=sys.stderr)
         return None
@@ -161,24 +160,29 @@ def get_historical_data(symbol: str):
         }
 
 @mcp.tool("get_local_stock_data")
-def get_local_stock_data(args: GetLocalStockDataArgs):
+def get_local_stock_data(args: Dict) -> dict:
     """Get local stock historical data
 
     Args:
         symbol: Stock symbol, e.g., 'AAPL', 'MSFT'
     """
     try:
-        data = read_local_stock_data(args.symbol)
+        # 使用 UpdateStockDataArgs 進行驗證
+        validated_args = GetLocalStockDataArgs(**args) 
+        # 從驗證後的物件取得參數
+        symbol = validated_args.symbol
+        
+        data = read_local_stock_data(symbol)
         if data is None:
             return {
                 'status': 'error',
-                'message': f'Data not found for symbol {args.symbol}',
+                'message': f'Data not found for symbol {symbol}',
                 'data': []
             }
         
         return {
             'status': 'success',
-            'message': f'Successfully retrieved historical data for {args.symbol}',
+            'message': f'Successfully retrieved historical data for {symbol}',
             'data': data
         }
     except Exception as e:
@@ -189,7 +193,7 @@ def get_local_stock_data(args: GetLocalStockDataArgs):
         }
 
 @mcp.tool("update_stock_data")
-def update_stock_data_tool(args: UpdateStockDataArgs):
+def update_stock_data_tool(args: Dict) -> dict:
     """Update stock data
 
     Args:
@@ -197,7 +201,17 @@ def update_stock_data_tool(args: UpdateStockDataArgs):
         start_date: Start date in YYYY-MM-DD format, defaults to 2015-01-01
     """
     try:
-        result = update_stock_data(args.symbol, args.start_date)
+        # 使用 UpdateStockDataArgs 進行驗證
+        validated_args = UpdateStockDataArgs(**args) 
+        # 從驗證後的物件取得參數
+        symbol = validated_args.symbol
+        start_date = validated_args.start_date
+
+        # 先檢查本地數據
+        local_data = read_local_stock_data(symbol)
+        if local_data is not None:
+            result = update_stock_data(symbol, start_date)
+
         if result['status'] == 'error':
             return result
             
